@@ -3,6 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
+var Fraction = require('fractions')
 
 Vue.config.productionTip = false
 
