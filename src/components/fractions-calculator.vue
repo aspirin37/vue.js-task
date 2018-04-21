@@ -1,26 +1,28 @@
 <template>
-  <div class="container d-flex justify-content-center">
-
-    <div class="fraction d-flex flex-row align-items-center" v-for="(fraction, i) in fractions">
-      <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @input="countFractions" v-if="fraction.operator">
-        <option v-for="operator in operators" :value="operator">{{ operator }}</option>
-      </select>
-      <div class="calculator__element">
-        <div class="input-group">
-          <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.numerator" @input="countFractions">
-        </div>
-        <div class="input-group">
-          <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.denominator" @input="countFractions">
+  <div class="calculator container d-flex flex-column">
+    <div class="d-flex">
+      <div class="fraction d-flex flex-row align-items-center" v-for="fraction in fractions">
+        <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="fraction.operator">
+          <option v-for="operator in operators" :value="operator">{{ operator }}</option>
+        </select>
+        <div class="calculator__element">
+          <div class="input-group">
+            <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.numerator" @input="countFractions">
+          </div>
+          <div class="input-group">
+            <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.denominator" @input="countFractions">
+          </div>
         </div>
       </div>
-    </div>
 
-    <span class="calculator__element calculator__equals-sign align-self-center">=</span>
+      <span class="calculator__element calculator__equals-sign align-self-center">=</span>
 
-    <div class="calculator__element calculator__element--answer">
-      <div class="calculator__answer calculator__answer--numerator">{{ answer.numerator }}</div>
-      <div class="calculator__answer">{{ answer.denominator }}</div>
+      <div class="calculator__element calculator__element--answer">
+        <div class="calculator__answer calculator__answer--numerator">{{ answer.numerator }}</div>
+        <div class="calculator__answer">{{ answer.denominator }}</div>
+      </div>
     </div>
+    <span class="text-left text-danger" v-if="errorMessage">{{ errorMessage }}</span>
   </div>
 </template>
 
@@ -34,55 +36,61 @@ export default {
   data () {
     return {
       operators: ['+', '-', '*', '/'],
+      errorMessage: '',
       fractions: [{
         numerator: 1,
         denominator: 1,
         simpleFraction: '',
       }, {
         operator: '+',
-        numerator: 2,
-        denominator: 2,
+        numerator: 1,
+        denominator: 1,
         simpleFraction: '',
       }],
       answer: {
-        numerator: 1,
+        numerator: 2,
         denominator: 1,
+        simpleFraction: '',
       }
     }
   },
   methods: {
-    // // Наибольший общий делитель
-    // getGreatestCommonDivisor (n, m) {
-    //   if (m > 0) {
-    //     const k = n % m;
-    //     return this.getGreatestCommonDivisor(m, k);
-    //   }
-    //   return Math.abs(n);
-    // },
-    // // Наименьшее общее кратное
-    // getLeastCommonMultiple (x, y) {
-    //   return (x / this.getGreatestCommonDivisor(x, y) | 0) * y;
-    // },
-    // // Дополнительны
-    // countAdditionalMultiple () {
-    //   this.getLeastCommonMultiple(this.leftPart.denominator, this.rightPart.denominator))
-    // }
-    // validateDenominator (evt) {
-    //   evt.target.value === '0' || evt.target.value === '-0'? evt.target.setCustomValidity('Ноль в знаменателе?') : evt.target.setCustomValidity('')
-    //   document.querySelector('#calculator-submit-btn').click()
-    // }
     countFractions () {
-      this.fractions.forEach((it) => {
-        it.simpleFraction = it.numerator + '/' + it.denominator
-      })
-      // console.log(new Fraction(this.fractions[0].numerator + '/' + this.fractions[0].denominator))
+      try {
+        this.fractions.forEach((it, i) => {
+          it.simpleFraction = it.numerator + '/' + it.denominator
+
+          if (it.operator) {
+            switch (it.operator) {
+              case '*':
+              this.answer.simpleFraction = Fraction.multiply(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              break
+              case '/':
+              this.answer.simpleFraction = Fraction.divide(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              break
+              case '+':
+              this.answer.simpleFraction = Fraction.add(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              break
+              case '-':
+              this.answer.simpleFraction = Fraction.subtract(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              break
+            }
+
+            const answerObject = new Fraction(this.answer.simpleFraction)
+            this.answer.numerator = answerObject.numerator
+            this.answer.denominator = answerObject.denominator
+          }
+        })
+        this.errorMessage = ''
+      } catch (error) {
+        this.errorMessage = 'Can not divide by zero!'
+      }
     }
   }
 }
 </script>
 
 <style scoped lang="sass">
-  .form-control-sm
 
   .calculator__number
     width: 80px
@@ -91,9 +99,6 @@ export default {
   .calculator__element
     position: relative
     margin-right: 15px
-
-    &--answer
-
 
   .calculator__answer,
   .calculator__equals-sign
