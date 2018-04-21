@@ -1,6 +1,6 @@
 <template>
   <div class="calculator container d-flex flex-column">
-    <div class="d-flex">
+    <div class="d-flex flex-wrap">
       <div class="fraction d-flex flex-row align-items-center" v-for="fraction in fractions">
         <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="fraction.operator">
           <option v-for="operator in operators" :value="operator">{{ operator }}</option>
@@ -22,7 +22,8 @@
         <div class="calculator__answer">{{ answer.denominator }}</div>
       </div>
     </div>
-    <span class="text-left text-danger" v-if="errorMessage">{{ errorMessage }}</span>
+    <div class="calculator__error-message text-left text-danger">{{ errorMessage }}</div>
+    <a class="calculator__add-fraction text-left text-dark" href='#' @click.prevent="addFraction"><u>ADD FRACTION</u></a>
   </div>
 </template>
 
@@ -46,6 +47,7 @@ export default {
         numerator: 1,
         denominator: 1,
         simpleFraction: '',
+        intermediateResult: ''
       }],
       answer: {
         numerator: 2,
@@ -63,20 +65,20 @@ export default {
           if (it.operator) {
             switch (it.operator) {
               case '*':
-              this.answer.simpleFraction = Fraction.multiply(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              it.intermediateResult = Fraction.multiply(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
               break
               case '/':
-              this.answer.simpleFraction = Fraction.divide(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              it.intermediateResult = Fraction.divide(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
               break
               case '+':
-              this.answer.simpleFraction = Fraction.add(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              it.intermediateResult = Fraction.add(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
               break
               case '-':
-              this.answer.simpleFraction = Fraction.subtract(this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              it.intermediateResult = Fraction.subtract(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
               break
             }
 
-            const answerObject = new Fraction(this.answer.simpleFraction)
+            const answerObject = new Fraction(it.intermediateResult)
             this.answer.numerator = answerObject.numerator
             this.answer.denominator = answerObject.denominator
           }
@@ -85,19 +87,29 @@ export default {
       } catch (error) {
         this.errorMessage = 'Can not divide by zero!'
       }
-    }
+    },
+    addFraction () {
+      this.fractions.push({
+        operator: '+',
+        numerator: 1,
+        denominator: 1,
+        simpleFraction: '',
+      })
+      this.countFractions()
+    },
   }
 }
 </script>
 
 <style scoped lang="sass">
+  .calculator
+    padding-left: 400px
 
   .calculator__number
     width: 80px
     margin-bottom: 7px
 
   .calculator__element
-    position: relative
     margin-right: 15px
 
   .calculator__answer,
@@ -107,5 +119,11 @@ export default {
 
     &--numerator
       border-bottom: 2px solid #2c3e50
+
+  .calculator__error-message
+    min-height: 25px
+
+  .calculator__add-fraction
+    width: 130px
 
 </style>
