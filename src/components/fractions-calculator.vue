@@ -52,107 +52,166 @@ export default {
         numerator: 1,
         denominator: 1,
         simpleFraction: '',
-        intermediateResult: ''
       }, {
         operator: '+',
         numerator: 1,
         denominator: 1,
         simpleFraction: '',
-        intermediateResult: '',
+        // intermediateResult: '',
       }],
       operators: ['+', '-', '*', '/'],
       errorMessage: '',
       fractions: [],
-      answer: {},
-      copy: [],
-      toCountAgain: false,
-      isMinusZero: false,
+      answer: {
+        numerator: 0,
+        denominator: 0
+      },
       decimalAnswer: 0,
-      toCountAgainCopy: []
+      // changedPriorityFractionsCopy: []
     }
   },
   methods: {
     countFractions () {
-      try {
-        const isNextHighPriorityOperation = (fraction, i, fractions) => {
-          return fractions[i + 1] && (fractions[i + 1].operator === '*' || fractions[i + 1].operator === '/') ? true : false
-        }
+      const fractionsCopy = lodash.cloneDeep(this.fractions)
 
-        const changeOperationsPriority = (fraction, i, fractions) => {
-          fraction.intermediateResult = new Fraction(fraction.simpleFraction)
-          fractions[i + 1].toSkip = true
-        }
+      fractionsCopy.forEach((it, i, arr) => {
+        it.simpleFraction = it.numerator + '/' + it.denominator
+      })
 
-        const getAnswer = (intermediateResult) => {
-          const answerObject = new Fraction(intermediateResult)
-          this.answer.numerator = answerObject.numerator
-          this.answer.denominator = answerObject.denominator
-          this.decimalAnswer = answerObject.numerator / answerObject.denominator
-        }
-
-        this.copy = lodash.cloneDeep(this.fractions)
-        this.toCountAgain = false
-
-        this.copy.forEach((it, i, arr) => {
-          it.simpleFraction = it.numerator + '/' + it.denominator
-          if (i == 0) {
-            if (isNextHighPriorityOperation(it, i, arr)) {
-              changeOperationsPriority(it, i, arr)
-              return
-            }
-            it.intermediateResult = it.simpleFraction
-          } else {
-            switch (it.operator) {
-              case '+':
-              if (isNextHighPriorityOperation(it, i, arr)) {
-                changeOperationsPriority(it, i, arr)
-                this.toCountAgain = true
-                return
-              }
-              it.intermediateResult = new Fraction(Fraction.add(arr[i - 1].intermediateResult, it.simpleFraction))
-              break
-              case '-':
-              if (isNextHighPriorityOperation(it, i, arr)) {
-                changeOperationsPriority(it, i, arr)
-                this.toCountAgain = true
-                return
-              }
-              it.intermediateResult = new Fraction(Fraction.subtract(arr[i - 1].intermediateResult, it.simpleFraction))
-              break
-              case '*':
-              it.intermediateResult = new Fraction(Fraction.multiply(arr[i - 1].intermediateResult, it.simpleFraction))
-              break
-              case '/':
-              it.intermediateResult = new Fraction(Fraction.divide(arr[i - 1].intermediateResult, it.simpleFraction))
-              break
-            }
-            getAnswer(it.intermediateResult)
+      fractionsCopy.forEach((it, i, arr) => {
+        if (arr[i + 1] && (arr[i + 1].operator === '*' || arr[i + 1].operator === '/')) {
+          let newFractionObject
+          switch (arr[i + 1].operator) {
+            case '*':
+            newFractionObject = Fraction.multiply(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
+            break
+            case '/':
+            newFractionObject = Fraction.divide(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
+            break
           }
-        })
-
-        if (this.toCountAgain) {
-          let result
-          this.toCountAgainCopy = lodash.cloneDeep(this.copy).filter((it) => !it.toSkip)
-
-          this.toCountAgainCopy.forEach((it, i, arr) => {
-            it.simpleFraction = it.numerator + '/' + it.denominator
-            if (i) {
-              switch (it.operator) {
-                case '+':
-                result = new Fraction(Fraction.add(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
-                break
-                case '-':
-                result = new Fraction(Fraction.subtract(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
-                break
-              }
-              getAnswer(result)
-            }
-          })
+          arr[i + 1].intermediateResult = newFractionObject.numerator + '/' + newFractionObject.denominator
+          arr[i + 1].intermediateOperator = it.intermediateOperator || it.operator
+          it.toSkip = true
         }
-        this.errorMessage = ''
-      } catch (error) {
-        this.errorMessage = 'Can not divide by zero!'
-      }
+      })
+
+      fractionsCopy.forEach((it) => {
+        if (it.intermediateOperator) {
+          it.operator = it.intermediateOperator
+          it.simpleFraction = it.intermediateResult
+
+          delete it.intermediateOperator
+          delete it.intermediateResult
+        }
+      })
+
+      // console.log(fractionsCopy)
+
+      const newFractions = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
+      console.log(newFractions)
+
+      // newFractions.forEach((it, i, arr) => {
+      //   if (arr[i - 1]) {
+      //     let newFractionObject
+      //     switch (it.operator) {
+      //       case '+':
+      //       newFractionObject = Fraction.add(arr[i - 1].intermediateResult2 || arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.intermediateResult || it.simpleFraction)
+      //       break
+      //       case '-':
+      //       newFractionObject = Fraction.subtract(arr[i - 1].intermediateResult2 || arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, arr[i - 1].intermediateResult || it.simpleFraction)
+      //       break
+      //     }
+      //     // if (it.intermediateResult) {
+      //       it.intermediateResult2 = newFractionObject.numerator + '/' + newFractionObject.denominator
+      //     // }
+      //   }
+
+      //   // if (i == arr.length - 1) console.log(it.intermediateResult2 || it.intermediateResult)
+      // })
+
+      // console.log(answer)
+
+      // console.log(newFractions[newFractions.length - 1].intermediateResult || newFractions[newFractions.length - 1].simpleFraction)
+
+      // try {
+      //   const fractionsCopy = lodash.cloneDeep(this.fractions)
+      //   let toCountAgain = false
+
+      //   const isNextHighPriorityOperation = (fraction, i, fractions) => {
+      //     return fractions[i + 1] && (fractions[i + 1].operator === '*' || fractions[i + 1].operator === '/') ? true : false
+      //   }
+
+      //   const changeOperationsPriority = (fraction, i, fractions) => {
+      //     fraction.intermediateResult = new Fraction(fraction.simpleFraction)
+      //     fractions[i + 1].toSkip = true
+      //   }
+
+      //   const getAnswer = (intermediateResult) => {
+      //     const answerObject = new Fraction(intermediateResult)
+      //     this.answer.numerator = answerObject.numerator
+      //     this.answer.denominator = answerObject.denominator
+      //     this.decimalAnswer = answerObject.numerator / answerObject.denominator
+      //   }
+
+      //   fractionsCopy.forEach((it, i, arr) => {
+      //     it.simpleFraction = it.numerator + '/' + it.denominator
+
+      //     if (i == 0 && isNextHighPriorityOperation(it, i, arr)) {
+      //       changeOperationsPriority(it, i, arr)
+      //     }
+
+      //     if (i >= 1) {
+      //       switch (it.operator) {
+      //         case '+':
+      //         if (isNextHighPriorityOperation(it, i, arr)) {
+      //           changeOperationsPriority(it, i, arr)
+      //           toCountAgain = true
+      //           return
+      //         }
+      //         it.intermediateResult = new Fraction(Fraction.add(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
+      //         break
+      //         case '-':
+      //         if (isNextHighPriorityOperation(it, i, arr)) {
+      //           changeOperationsPriority(it, i, arr)
+      //           toCountAgain = true
+      //           return
+      //         }
+      //         it.intermediateResult = new Fraction(Fraction.subtract(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
+      //         break
+      //         case '*':
+      //         it.intermediateResult = new Fraction(Fraction.multiply(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
+      //         break
+      //         case '/':
+      //         it.intermediateResult = new Fraction(Fraction.divide(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
+      //         break
+      //       }
+      //       getAnswer(it.intermediateResult)
+      //     }
+      //   })
+
+      //   if (toCountAgain) {
+      //     this.changedPriorityFractionsCopy = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
+      //     let result
+
+      //     this.changedPriorityFractionsCopy.forEach((it, i, arr) => {
+      //       it.simpleFraction = it.numerator + '/' + it.denominator
+      //       if (i) {
+      //         switch (it.operator) {
+      //           case '+':
+      //           result = new Fraction(Fraction.add(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
+      //           break
+      //           case '-':
+      //           result = new Fraction(Fraction.subtract(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
+      //           break
+      //         }
+      //         getAnswer(result)
+      //       }
+      //     })
+      //   }
+      //   this.errorMessage = ''
+      // } catch (error) {
+      //   this.errorMessage = 'Can not divide by zero!'
+      // }
     },
     addFraction () {
       this.fractions.push({
