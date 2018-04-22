@@ -3,7 +3,7 @@
     <div class="d-flex flex-wrap">
       <div class="d-flex flex-row align-items-center" v-for="(fraction, i) in fractions">
         <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="i">
-          <option v-for="operator in operators" :value="operator">{{ operator }}</option>
+          <option v-for="operator in OPERATORS" :value="operator">{{ operator }}</option>
         </select>
         <div class="calculator__element">
           <div class="input-group">
@@ -47,178 +47,97 @@ export default {
   },
   data () {
     return {
+      OPERATORS: ['+', '-', '*', '/'],
       DEFAULT_FRACTIONS: [{
         operator: '+',
         numerator: 1,
         denominator: 1,
-        simpleFraction: '',
       }, {
         operator: '+',
         numerator: 1,
         denominator: 1,
-        simpleFraction: '',
-        // intermediateResult: '',
       }],
-      operators: ['+', '-', '*', '/'],
-      errorMessage: '',
       fractions: [],
       answer: {
         numerator: 0,
         denominator: 0
       },
       decimalAnswer: 0,
-      // changedPriorityFractionsCopy: []
+      errorMessage: '',
     }
   },
   methods: {
     countFractions () {
-      const fractionsCopy = lodash.cloneDeep(this.fractions)
+      try {
+        const fractionsCopy = lodash.cloneDeep(this.fractions)
 
-      fractionsCopy.forEach((it, i, arr) => {
-        it.simpleFraction = it.numerator + '/' + it.denominator
-      })
+        const getAnswer = (result) => {
+          const answerObject = new Fraction(result)
+          this.answer.numerator = answerObject.numerator
+          this.answer.denominator = answerObject.denominator
+          this.decimalAnswer = answerObject.numerator / answerObject.denominator
+        }
 
-      fractionsCopy.forEach((it, i, arr) => {
-        if (arr[i + 1] && (arr[i + 1].operator === '*' || arr[i + 1].operator === '/')) {
-          let newFractionObject
-          switch (arr[i + 1].operator) {
-            case '*':
-            newFractionObject = Fraction.multiply(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
-            break
-            case '/':
-            newFractionObject = Fraction.divide(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
-            break
+        fractionsCopy.forEach((it, i, arr) => {
+          it.simpleFraction = it.numerator + '/' + it.denominator
+        })
+
+        fractionsCopy.forEach((it, i, arr) => {
+          if (arr[i + 1] && (arr[i + 1].operator === '*' || arr[i + 1].operator === '/')) {
+            let newFractionObject
+            switch (arr[i + 1].operator) {
+              case '*':
+              newFractionObject = Fraction.multiply(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
+              break
+              case '/':
+              newFractionObject = Fraction.divide(it.intermediateResult || it.simpleFraction, arr[i + 1].simpleFraction)
+              break
+            }
+            arr[i + 1].intermediateResult = newFractionObject.numerator + '/' + newFractionObject.denominator
+            arr[i + 1].intermediateOperator = it.intermediateOperator || it.operator
+            it.toSkip = true
           }
-          arr[i + 1].intermediateResult = newFractionObject.numerator + '/' + newFractionObject.denominator
-          arr[i + 1].intermediateOperator = it.intermediateOperator || it.operator
-          it.toSkip = true
-        }
-      })
+        })
 
-      fractionsCopy.forEach((it) => {
-        if (it.intermediateOperator) {
-          it.operator = it.intermediateOperator
-          it.simpleFraction = it.intermediateResult
+        fractionsCopy.forEach((it) => {
+          if (it.intermediateOperator) {
+            it.operator = it.intermediateOperator
+            it.simpleFraction = it.intermediateResult
+          }
+        })
 
-          delete it.intermediateOperator
-          delete it.intermediateResult
-        }
-      })
+        const newFractions = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
 
-      // console.log(fractionsCopy)
+        newFractions.forEach((it, i, arr) => {
+          if (arr[i - 1]) {
+            let newFractionObject
+            switch (it.operator) {
+              case '+':
+              newFractionObject = Fraction.add(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction)
+              break
+              case '-':
+              newFractionObject = Fraction.subtract(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction)
+              break
+            }
+            it.intermediateResult = newFractionObject.numerator + '/' + newFractionObject.denominator
+          }
 
-      const newFractions = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
-      console.log(newFractions)
-
-      // newFractions.forEach((it, i, arr) => {
-      //   if (arr[i - 1]) {
-      //     let newFractionObject
-      //     switch (it.operator) {
-      //       case '+':
-      //       newFractionObject = Fraction.add(arr[i - 1].intermediateResult2 || arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.intermediateResult || it.simpleFraction)
-      //       break
-      //       case '-':
-      //       newFractionObject = Fraction.subtract(arr[i - 1].intermediateResult2 || arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, arr[i - 1].intermediateResult || it.simpleFraction)
-      //       break
-      //     }
-      //     // if (it.intermediateResult) {
-      //       it.intermediateResult2 = newFractionObject.numerator + '/' + newFractionObject.denominator
-      //     // }
-      //   }
-
-      //   // if (i == arr.length - 1) console.log(it.intermediateResult2 || it.intermediateResult)
-      // })
-
-      // console.log(answer)
-
-      // console.log(newFractions[newFractions.length - 1].intermediateResult || newFractions[newFractions.length - 1].simpleFraction)
-
-      // try {
-      //   const fractionsCopy = lodash.cloneDeep(this.fractions)
-      //   let toCountAgain = false
-
-      //   const isNextHighPriorityOperation = (fraction, i, fractions) => {
-      //     return fractions[i + 1] && (fractions[i + 1].operator === '*' || fractions[i + 1].operator === '/') ? true : false
-      //   }
-
-      //   const changeOperationsPriority = (fraction, i, fractions) => {
-      //     fraction.intermediateResult = new Fraction(fraction.simpleFraction)
-      //     fractions[i + 1].toSkip = true
-      //   }
-
-      //   const getAnswer = (intermediateResult) => {
-      //     const answerObject = new Fraction(intermediateResult)
-      //     this.answer.numerator = answerObject.numerator
-      //     this.answer.denominator = answerObject.denominator
-      //     this.decimalAnswer = answerObject.numerator / answerObject.denominator
-      //   }
-
-      //   fractionsCopy.forEach((it, i, arr) => {
-      //     it.simpleFraction = it.numerator + '/' + it.denominator
-
-      //     if (i == 0 && isNextHighPriorityOperation(it, i, arr)) {
-      //       changeOperationsPriority(it, i, arr)
-      //     }
-
-      //     if (i >= 1) {
-      //       switch (it.operator) {
-      //         case '+':
-      //         if (isNextHighPriorityOperation(it, i, arr)) {
-      //           changeOperationsPriority(it, i, arr)
-      //           toCountAgain = true
-      //           return
-      //         }
-      //         it.intermediateResult = new Fraction(Fraction.add(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
-      //         break
-      //         case '-':
-      //         if (isNextHighPriorityOperation(it, i, arr)) {
-      //           changeOperationsPriority(it, i, arr)
-      //           toCountAgain = true
-      //           return
-      //         }
-      //         it.intermediateResult = new Fraction(Fraction.subtract(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
-      //         break
-      //         case '*':
-      //         it.intermediateResult = new Fraction(Fraction.multiply(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
-      //         break
-      //         case '/':
-      //         it.intermediateResult = new Fraction(Fraction.divide(arr[i - 1].intermediateResult || arr[i - 1].simpleFraction, it.simpleFraction))
-      //         break
-      //       }
-      //       getAnswer(it.intermediateResult)
-      //     }
-      //   })
-
-      //   if (toCountAgain) {
-      //     this.changedPriorityFractionsCopy = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
-      //     let result
-
-      //     this.changedPriorityFractionsCopy.forEach((it, i, arr) => {
-      //       it.simpleFraction = it.numerator + '/' + it.denominator
-      //       if (i) {
-      //         switch (it.operator) {
-      //           case '+':
-      //           result = new Fraction(Fraction.add(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
-      //           break
-      //           case '-':
-      //           result = new Fraction(Fraction.subtract(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
-      //           break
-      //         }
-      //         getAnswer(result)
-      //       }
-      //     })
-      //   }
-      //   this.errorMessage = ''
-      // } catch (error) {
-      //   this.errorMessage = 'Can not divide by zero!'
-      // }
+          if (arr.length > 1 && i == arr.length - 1) {
+            getAnswer(it.intermediateResult)
+            return
+          }
+          getAnswer(it.simpleFraction)
+        })
+        this.errorMessage = ''
+      } catch (error) {
+        this.errorMessage = 'Can not divide by zero!'
+      }
     },
     addFraction () {
       this.fractions.push({
         operator: '+',
         numerator: 1,
         denominator: 1,
-        simpleFraction: '',
       })
       this.countFractions()
     },
