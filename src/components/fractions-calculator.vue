@@ -1,8 +1,8 @@
 <template>
   <div class="calculator container d-flex flex-column">
     <div class="d-flex flex-wrap">
-      <div class="fraction d-flex flex-row align-items-center" v-for="fraction in fractions">
-        <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="fraction.operator">
+      <div class="d-flex flex-row align-items-center" v-for="(fraction, i) in fractions">
+        <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="i">
           <option v-for="operator in operators" :value="operator">{{ operator }}</option>
         </select>
         <div class="calculator__element">
@@ -16,73 +16,139 @@
       </div>
 
       <span class="calculator__element calculator__equals-sign align-self-center">=</span>
+      <span class="calculator__element calculator__equals-sign align-self-center">
+        <span v-if="decimalAnswer < 0 && decimalAnswer > -1">-</span>
+        <span v-if="decimalAnswer >= 1 || decimalAnswer <= -1 || decimalAnswer == 0">{{ Math.trunc(decimalAnswer) }}</span>
+      </span>
 
-      <div class="calculator__element calculator__element--answer">
-        <div class="calculator__answer calculator__answer--numerator">{{ answer.numerator }}</div>
-        <div class="calculator__answer">{{ answer.denominator }}</div>
+      <div class="calculator__element calculator__element--answer" v-if="answer.numerator % answer.denominator">
+        <div class="calculator__answer calculator__answer--numerator">{{ Math.abs(answer.numerator % answer.denominator) }}</div>
+        <div class="calculator__answer">{{ Math.abs(answer.denominator) }}</div>
       </div>
     </div>
+
     <div class="calculator__error-message text-left text-danger">{{ errorMessage }}</div>
-    <a class="calculator__add-fraction text-left text-dark" href='#' @click.prevent="addFraction"><u>ADD FRACTION</u></a>
+    <div class="text-left">
+      <span class="calculator__button text-dark" @click.prevent="addFraction">ADD FRACTION</span>
+      <span class="calculator__button text-dark" @click.prevent="setToDefault">RESET</span>
+    </div>
   </div>
 </template>
 
 <script>
 import Fraction from 'fractions'
+import lodash from 'lodash'
+
 export default {
   name: 'FractionsCalculator',
   components: {
-    Fraction
+    Fraction,
+    lodash,
   },
   data () {
     return {
-      operators: ['+', '-', '*', '/'],
-      errorMessage: '',
-      fractions: [{
-        numerator: 1,
-        denominator: 1,
-        simpleFraction: '',
-      }, {
+      DEFAULT_FRACTIONS: [{
         operator: '+',
         numerator: 1,
         denominator: 1,
         simpleFraction: '',
         intermediateResult: ''
-      }],
-      answer: {
-        numerator: 2,
+      }, {
+        operator: '+',
+        numerator: 1,
         denominator: 1,
         simpleFraction: '',
-      }
+        intermediateResult: '',
+      }],
+      operators: ['+', '-', '*', '/'],
+      errorMessage: '',
+      fractions: [],
+      answer: {},
+      copy: [],
+      toCountAgain: false,
+      isMinusZero: false,
+      decimalAnswer: 0,
+      toCountAgainCopy: []
     }
   },
   methods: {
     countFractions () {
       try {
-        this.fractions.forEach((it, i) => {
-          it.simpleFraction = it.numerator + '/' + it.denominator
+        const isNextHighPriorityOperation = (fraction, i, fractions) => {
+          return fractions[i + 1] && (fractions[i + 1].operator === '*' || fractions[i + 1].operator === '/') ? true : false
+        }
 
-          if (it.operator) {
+        const changeOperationsPriority = (fraction, i, fractions) => {
+          fraction.intermediateResult = new Fraction(fraction.simpleFraction)
+          fractions[i + 1].toSkip = true
+        }
+
+        const getAnswer = (intermediateResult) => {
+          const answerObject = new Fraction(intermediateResult)
+          this.answer.numerator = answerObject.numerator
+          this.answer.denominator = answerObject.denominator
+          this.decimalAnswer = answerObject.numerator / answerObject.denominator
+        }
+
+        this.copy = lodash.cloneDeep(this.fractions)
+        this.toCountAgain = false
+
+        this.copy.forEach((it, i, arr) => {
+          it.simpleFraction = it.numerator + '/' + it.denominator
+          if (i == 0) {
+            if (isNextHighPriorityOperation(it, i, arr)) {
+              changeOperationsPriority(it, i, arr)
+              return
+            }
+            it.intermediateResult = it.simpleFraction
+          } else {
             switch (it.operator) {
-              case '*':
-              it.intermediateResult = Fraction.multiply(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
-              break
-              case '/':
-              it.intermediateResult = Fraction.divide(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
-              break
               case '+':
-              it.intermediateResult = Fraction.add(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              if (isNextHighPriorityOperation(it, i, arr)) {
+                changeOperationsPriority(it, i, arr)
+                this.toCountAgain = true
+                return
+              }
+              it.intermediateResult = new Fraction(Fraction.add(arr[i - 1].intermediateResult, it.simpleFraction))
               break
               case '-':
-              it.intermediateResult = Fraction.subtract(this.fractions[i - 1].intermediateResult || this.fractions[i - 1].simpleFraction, it.simpleFraction)
+              if (isNextHighPriorityOperation(it, i, arr)) {
+                changeOperationsPriority(it, i, arr)
+                this.toCountAgain = true
+                return
+              }
+              it.intermediateResult = new Fraction(Fraction.subtract(arr[i - 1].intermediateResult, it.simpleFraction))
+              break
+              case '*':
+              it.intermediateResult = new Fraction(Fraction.multiply(arr[i - 1].intermediateResult, it.simpleFraction))
+              break
+              case '/':
+              it.intermediateResult = new Fraction(Fraction.divide(arr[i - 1].intermediateResult, it.simpleFraction))
               break
             }
-
-            const answerObject = new Fraction(it.intermediateResult)
-            this.answer.numerator = answerObject.numerator
-            this.answer.denominator = answerObject.denominator
+            getAnswer(it.intermediateResult)
           }
         })
+
+        if (this.toCountAgain) {
+          let result
+          this.toCountAgainCopy = lodash.cloneDeep(this.copy).filter((it) => !it.toSkip)
+
+          this.toCountAgainCopy.forEach((it, i, arr) => {
+            it.simpleFraction = it.numerator + '/' + it.denominator
+            if (i) {
+              switch (it.operator) {
+                case '+':
+                result = new Fraction(Fraction.add(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
+                break
+                case '-':
+                result = new Fraction(Fraction.subtract(lodash.cloneDeep(arr[i - 1].intermediateResult), it.intermediateResult))
+                break
+              }
+              getAnswer(result)
+            }
+          })
+        }
         this.errorMessage = ''
       } catch (error) {
         this.errorMessage = 'Can not divide by zero!'
@@ -97,6 +163,13 @@ export default {
       })
       this.countFractions()
     },
+    setToDefault () {
+      this.fractions = lodash.cloneDeep(this.DEFAULT_FRACTIONS)
+      this.countFractions()
+    },
+  },
+  created () {
+    this.setToDefault()
   }
 }
 </script>
@@ -123,7 +196,10 @@ export default {
   .calculator__error-message
     min-height: 25px
 
-  .calculator__add-fraction
+  .calculator__button
     width: 130px
+    margin-right: 10px
+    text-decoration: underline
+    cursor: pointer
 
 </style>
