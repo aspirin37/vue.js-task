@@ -16,12 +16,12 @@
       </div>
 
       <span class="calculator__element calculator__equals-sign align-self-center">=</span>
-      <span class="calculator__element calculator__equals-sign align-self-center">
+      <span class="calculator__element calculator__equals-sign align-self-center" v-if="!errorMessage">
         <span v-if="decimalAnswer < 0 && decimalAnswer > -1">-</span>
         <span v-if="decimalAnswer >= 1 || decimalAnswer <= -1 || decimalAnswer == 0">{{ Math.trunc(decimalAnswer) }}</span>
       </span>
 
-      <div class="calculator__element calculator__element--answer" v-if="answerRemainder">
+      <div class="calculator__element calculator__element--answer" v-if="!errorMessage && answerRemainder">
         <div class="calculator__answer calculator__answer--numerator">{{ Math.abs(answerRemainder) }}</div>
         <div class="calculator__answer">{{ Math.abs(answer.denominator) }}</div>
       </div>
@@ -30,7 +30,10 @@
     <div class="calculator__error-message text-left text-danger">{{ errorMessage }}</div>
     <div class="text-left">
       <span class="calculator__button text-dark" @click.prevent="addFraction">ADD FRACTION</span>
-      <span class="calculator__button text-dark" @click.prevent="setToDefault">RESET</span>
+      <span class="calculator__button text-dark" @click.prevent="setFractionsToDefault">RESET</span>
+      <router-link :to="{ path: 'web-sockets' }" class="calculator__button text-dark">
+        TO WEB-SOCKETS
+      </router-link>
     </div>
   </div>
 </template>
@@ -72,6 +75,10 @@ export default {
       try {
         const fractionsCopy = lodash.cloneDeep(this.fractions)
 
+        /**
+         * Функция принимает на вход строку с простой дробью, на основании которой высчитывает поля, необходимые для отрисовки ответа
+         * @param  {string}
+         */
         const getAnswer = (result) => {
           const answerObject = new Fraction(result)
           this.answer.numerator = answerObject.numerator
@@ -84,6 +91,7 @@ export default {
           it.simpleFraction = it.numerator + '/' + it.denominator
         })
 
+        // Если следующий оператор является умножением или делением, запоминаем промежуточный результат в одном объекте, остальные стираем. Так же передаем в наш объект знак предшествующий операции (плюс или минус)
         fractionsCopy.forEach((it, i, arr) => {
           if (arr[i + 1] && (arr[i + 1].operator === '*' || arr[i + 1].operator === '/')) {
             let newFractionObject
@@ -101,6 +109,7 @@ export default {
           }
         })
 
+        // Заменяем значения дробей и их знаки на промежуточные результаты
         fractionsCopy.forEach((it) => {
           if (it.intermediateOperator) {
             it.operator = it.intermediateOperator
@@ -108,8 +117,10 @@ export default {
           }
         })
 
+        // Избавляемся от отмеченных на удаление дробей
         const newFractions = lodash.cloneDeep(fractionsCopy).filter((it) => !it.toSkip)
 
+        // Если нужно, складываем, вычитаем
         newFractions.forEach((it, i, arr) => {
           if (arr[i - 1]) {
             let newFractionObject
@@ -143,13 +154,13 @@ export default {
       })
       this.countFractions()
     },
-    setToDefault () {
+    setFractionsToDefault () {
       this.fractions = lodash.cloneDeep(this.DEFAULT_FRACTIONS)
       this.countFractions()
     },
   },
   created () {
-    this.setToDefault()
+    this.setFractionsToDefault()
   }
 }
 </script>
