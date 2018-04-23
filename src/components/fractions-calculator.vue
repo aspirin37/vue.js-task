@@ -1,16 +1,16 @@
 <template>
   <div class="calculator container d-flex flex-column">
-    <div class="d-flex flex-wrap">
+    <form class="d-flex flex-wrap" @submit.prevent>
       <div class="d-flex flex-row align-items-center" v-for="(fraction, i) in fractions">
         <select class="calculator__element form-control form-control-sm" v-model="fraction.operator" @change="countFractions" v-if="i">
           <option v-for="operator in OPERATORS" :value="operator">{{ operator }}</option>
         </select>
         <div class="calculator__element">
           <div class="input-group">
-            <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.numerator" @input="countFractions">
+            <the-mask mask="#######" class="calculator__number form-control form-control-sm" v-model="fraction.numerator" @input="countFractions"/>
           </div>
           <div class="input-group">
-            <input class="calculator__number form-control form-control-sm" type="number" step="1" v-model="fraction.denominator" @input="countFractions">
+            <the-mask mask="#######" class="calculator__number form-control form-control-sm" v-model="fraction.denominator" @input="countFractions"/>
           </div>
         </div>
       </div>
@@ -25,7 +25,7 @@
         <div class="calculator__answer calculator__answer--numerator">{{ Math.abs(answerRemainder) }}</div>
         <div class="calculator__answer">{{ Math.abs(answer.denominator) }}</div>
       </div>
-    </div>
+    </form>
 
     <div class="calculator__error-message text-left text-danger">{{ errorMessage }}</div>
     <div class="text-left">
@@ -46,7 +46,7 @@ export default {
   name: 'FractionsCalculator',
   components: {
     Fraction,
-    lodash,
+    lodash
   },
   data () {
     return {
@@ -71,7 +71,7 @@ export default {
     }
   },
   methods: {
-    countFractions () {
+    countFractions (evt) {
       try {
         const fractionsCopy = lodash.cloneDeep(this.fractions)
 
@@ -91,7 +91,7 @@ export default {
           it.simpleFraction = it.numerator + '/' + it.denominator
         })
 
-        // Если следующий оператор является умножением или делением, запоминаем промежуточный результат в одном объекте, остальные стираем. Так же передаем в наш объект знак предшествующий операции (плюс или минус)
+        // Если следующий оператор является умножением или делением, запоминаем промежуточный результат в одном объекте, а остальные объекты отмечаем на удаление. Затем передаем в наш объект знак предшествующий операции (плюс или минус)
         fractionsCopy.forEach((it, i, arr) => {
           if (arr[i + 1] && (arr[i + 1].operator === '*' || arr[i + 1].operator === '/')) {
             let newFractionObject

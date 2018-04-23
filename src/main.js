@@ -3,7 +3,9 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
-var Fraction = require('fractions')
+import VueTheMask from 'vue-the-mask'
+
+Vue.use(VueTheMask)
 
 Vue.config.productionTip = false
 
