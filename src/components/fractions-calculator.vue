@@ -21,8 +21,8 @@
         <span v-if="decimalAnswer >= 1 || decimalAnswer <= -1 || decimalAnswer == 0">{{ Math.trunc(decimalAnswer) }}</span>
       </span>
 
-      <div class="calculator__element calculator__element--answer" v-if="answer.numerator % answer.denominator">
-        <div class="calculator__answer calculator__answer--numerator">{{ Math.abs(answer.numerator % answer.denominator) }}</div>
+      <div class="calculator__element calculator__element--answer" v-if="answerRemainder">
+        <div class="calculator__answer calculator__answer--numerator">{{ Math.abs(answerRemainder) }}</div>
         <div class="calculator__answer">{{ Math.abs(answer.denominator) }}</div>
       </div>
     </div>
@@ -63,6 +63,7 @@ export default {
         denominator: 0
       },
       decimalAnswer: 0,
+      answerRemainder: 0,
       errorMessage: '',
     }
   },
@@ -76,6 +77,7 @@ export default {
           this.answer.numerator = answerObject.numerator
           this.answer.denominator = answerObject.denominator
           this.decimalAnswer = answerObject.numerator / answerObject.denominator
+          this.answerRemainder = answerObject.numerator % answerObject.denominator
         }
 
         fractionsCopy.forEach((it, i, arr) => {
